@@ -1,0 +1,16 @@
+{
+  "name": "beacon",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "BEACON (Brief Economic Analysis & Curated Online News) — 매일 아침 키워드 경제 뉴스를 Claude로 3줄 요약해 텔레그램으로 보내주는 개인용 봇",
+  "scripts": {
+    "dev": "wrangler dev --test-scheduled",
+    "deploy": "wrangler deploy",
+    "logs": "wrangler tail",
+    "test": "node --test test/*.test.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

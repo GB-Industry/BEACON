@@ -1,0 +1,23 @@
+# 설치된 패키지 (npm install 로 다시 만들 수 있음)
+node_modules/
+
+# wrangler가 배포·로컬 실행 중 만드는 임시 폴더
+.wrangler/
+dist/
+
+# 로컬 비밀값 파일 (혹시 만들게 될 경우 대비)
+.dev.vars
+.dev.vars.*
+.env
+.env.*
+
+# 로그
+*.log
+npm-debug.log*
+
+# OS·에디터 잡파일
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
