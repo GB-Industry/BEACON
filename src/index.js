@@ -1,7 +1,3 @@
-// BEACON — Cloudflare Worker 진입점
-//  - fetch:     텔레그램 웹훅, 설정 화면(Mini App), 설정 API, 최초 설정(/setup)
-//  - scheduled: 5분마다 실행되어 설정한 시각이면 브리핑 전송
-
 import { loadSettings, saveSettings } from './config.js';
 import { runScheduled, sendBriefing } from './briefing.js';
 import { SETTINGS_PAGE } from './page.js';
@@ -49,7 +45,7 @@ async function handleWebhook(request, env, ctx, origin) {
   } catch (err) {
     console.error('웹훅 처리 실패', err);
   }
-  return new Response('ok'); // 실패해도 200을 돌려줘야 텔레그램이 같은 요청을 반복하지 않는다.
+  return new Response('ok');
 }
 
 async function handleSettingsApi(request, env) {
@@ -69,13 +65,11 @@ async function handleSendNowApi(request, env, ctx) {
   return json({ ok: true });
 }
 
-// Mini App 요청이 진짜 텔레그램에서, 주인 계정으로 온 것인지 확인
 async function authorize(request, env) {
   const user = await verifyInitData(request.headers.get('X-Telegram-Init-Data'), env.TELEGRAM_BOT_TOKEN);
   return Boolean(user && env.OWNER_CHAT_ID && String(user.id) === String(env.OWNER_CHAT_ID));
 }
 
-// 배포 후 한 번만: https://<worker 주소>/setup?key=<WEBHOOK_SECRET>
 async function handleSetup(env, url) {
   if (!env.WEBHOOK_SECRET || url.searchParams.get('key') !== env.WEBHOOK_SECRET) {
     return json({ error: 'key가 WEBHOOK_SECRET과 다릅니다' }, 403);

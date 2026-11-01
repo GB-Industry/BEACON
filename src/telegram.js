@@ -1,5 +1,3 @@
-// 텔레그램 API 호출, 봇 명령어 처리, Mini App 인증.
-
 import { isValidTime, loadSettings, normalizeKeywords, saveSettings } from './config.js';
 
 export async function tg(env, method, payload) {
@@ -42,7 +40,6 @@ export const BOT_COMMANDS = [
   { command: 'resume', description: '브리핑 다시 받기' },
 ];
 
-// sendNow: /now 처리용 콜백 (index.js에서 waitUntil로 감싸서 넘겨준다)
 export async function handleUpdate(update, env, { origin, sendNow }) {
   const message = update.message;
   if (!message || typeof message.text !== 'string') return;
@@ -54,7 +51,7 @@ export async function handleUpdate(update, env, { origin, sendNow }) {
       + 'README의 안내대로 OWNER_CHAT_ID 로 등록해 주세요.');
     return;
   }
-  if (chatId !== String(env.OWNER_CHAT_ID)) return; // 개인용 봇: 다른 사람은 무시
+  if (chatId !== String(env.OWNER_CHAT_ID)) return;
 
   const { command, arg } = parseCommand(message.text);
   const reply = (text, extra) => sendMessage(env, chatId, text, extra);
@@ -168,8 +165,6 @@ export function describeSettings(s) {
   ].join('\n');
 }
 
-// Telegram Mini App initData 검증
-// https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
 export async function verifyInitData(initData, botToken, maxAgeSeconds = 86400, nowMs = Date.now()) {
   if (!initData) return null;
   const params = new URLSearchParams(initData);

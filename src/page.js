@@ -1,6 +1,3 @@
-// 텔레그램 안에서 열리는 설정 화면 (Telegram Mini App)
-// 주의: 이 파일은 JS 템플릿 문자열이므로 아래 HTML/스크립트 안에서는 백틱과 ${} 를 쓰지 않는다.
-
 export const SETTINGS_PAGE = `<!DOCTYPE html>
 <html lang="ko">
 <head>

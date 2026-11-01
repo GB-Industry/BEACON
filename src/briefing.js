@@ -1,5 +1,3 @@
-// 수집 → 요약 → 메시지 구성 → 전송 → 상태 저장.
-
 import { loadSettings, loadState, saveState } from './config.js';
 import { collectArticles } from './news.js';
 import { summarize } from './summary.js';
@@ -18,9 +16,6 @@ export async function runScheduled(env, date = new Date()) {
   return { sent: true };
 }
 
-// markDaily: 정기 브리핑이면 true (오늘 보냄으로 기록).
-// preview:   /now 미리보기면 true. 이미 보낸 기사도 포함하고, 보낸 기록을 남기지 않는다.
-//            그래서 몇 번을 눌러도 기사가 오고, 정기 브리핑의 중복 제거에 영향이 없다.
 export async function sendBriefing(env, options = {}) {
   const settings = options.settings || await loadSettings(env);
   const state = options.state || await loadState(env);
@@ -108,13 +103,11 @@ function appendArticles(lines, articles) {
   }
 }
 
-// [언론사] 기사 제목(링크)
 export function formatArticleLine(article) {
   const source = article.source ? `[${escapeHtml(article.source)}] ` : '';
   return `${source}<a href="${escapeHtml(article.link)}">${escapeHtml(article.title)}</a>`;
 }
 
-// 텔레그램 메시지 길이 제한(4096자) 때문에 줄 단위로 나눈다. 한 줄은 완결된 HTML이다.
 export function splitMessage(text, limit) {
   const parts = [];
   let current = '';

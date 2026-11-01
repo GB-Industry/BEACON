@@ -1,6 +1,3 @@
-// 한국 시간 기준으로 "지금 보내야 하는가"를 판단한다.
-// Cron은 5분마다 돌고, 설정 시각부터 60분 안에 한 번만 보낸다.
-
 export const CATCH_UP_WINDOW_MINUTES = 60;
 const WEEKDAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -26,7 +23,6 @@ export function shouldSend(settings, state, now) {
   return now.minutes >= target && now.minutes < target + CATCH_UP_WINDOW_MINUTES;
 }
 
-// "2026-11-01" → "2026년 11월 01일 (일)"
 export function formatDateLabel(dateStr, weekday) {
   const [year, month, day] = dateStr.split('-');
   return `${year}년 ${month}월 ${day}일 (${WEEKDAY_NAMES[weekday]})`;

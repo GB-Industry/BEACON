@@ -1,13 +1,11 @@
-// 사용자 설정과 실행 상태를 KV에 저장/조회한다.
-
 export const DEFAULT_SETTINGS = {
   keywords: ['금리', '환율', '반도체'],
-  time: '07:30',        // 받는 시간 (한국 시간, HH:MM)
-  weekdaysOnly: false,  // 평일에만 받기
-  maxArticles: 10,      // 브리핑에 담을 최대 기사 수
-  perKeyword: 4,        // 키워드당 최대 기사 수
-  summary: true,        // Claude 3줄 요약 사용
-  paused: false,        // 일시정지
+  time: '07:30',
+  weekdaysOnly: false,
+  maxArticles: 10,
+  perKeyword: 4,
+  summary: true,
+  paused: false,
 };
 
 const SETTINGS_KEY = 'settings';

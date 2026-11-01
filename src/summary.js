@@ -1,5 +1,3 @@
-// Claude API로 "오늘의 경제 브리핑 3줄 요약"을 만든다.
-
 const API_URL = 'https://api.anthropic.com/v1/messages';
 const DEFAULT_MODEL = 'claude-haiku-5-5';
 
@@ -59,9 +57,7 @@ export function parseSummary(text) {
         const lines = parsed.lines.map((l) => String(l).trim()).filter(Boolean);
         if (lines.length > 0) return lines.slice(0, 3);
       }
-    } catch {
-      // JSON이 아니면 아래 줄 단위 파싱으로 넘어간다.
-    }
+    } catch {}
   }
   const lines = text.split('\n')
     .map((l) => l.replace(/^\s*(\d+[.)]|[-•*])\s*/, '').trim())

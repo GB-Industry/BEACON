@@ -48,7 +48,7 @@ function installFetchMock(now) {
       return new Response(rssFixture(now));
     }
     if (u.startsWith('https://api.anthropic.com/')) {
-      return Response.json({ content: [{ type: 'text', text: '{"lines":["한은이 금리를 동결했다 [1]","환율이 1,380원을 넘었다 [2]","시장은 인하 시점을 주목한다 [1]"]}' }] });
+      return Response.json({ content: [{ type: 'text', text: '{"lines":["한은이 금리를 동결했다","환율이 1,380원을 넘었다","시장은 인하 시점을 주목한다"]}' }] });
     }
     if (u.startsWith('https://api.telegram.org/')) {
       return Response.json({ ok: true, result: { message_id: 1 } });
@@ -89,7 +89,6 @@ test('설정 정리: 잘못된 값은 기본값/범위로', () => {
 
 test('스케줄 판단: 한국 시간 기준, 하루 한 번, 60분 창', () => {
   const settings = sanitizeSettings({ time: '07:30' });
-  // 2026-11-02(월) 07:35 KST = 2026-11-01 22:35 UTC
   const now = nowInZone(540, new Date('2026-11-01T22:35:00Z'));
   assert.equal(now.dateStr, '2026-11-02');
   assert.equal(shouldSend(settings, { lastSentDate: null }, now), true);
@@ -135,7 +134,7 @@ test('Mini App initData 검증', async () => {
 });
 
 test('정기 실행: 수집 → 요약 → 전송 → 중복 방지', async () => {
-  const fixedNow = Date.parse('2026-11-01T22:35:00Z'); // 월요일 07:35 KST
+  const fixedNow = Date.parse('2026-11-01T22:35:00Z');
   const realNow = Date.now;
   Date.now = () => fixedNow;
   try {
@@ -143,7 +142,6 @@ test('정기 실행: 수집 → 요약 → 전송 → 중복 방지', async () =
     const env = makeEnv();
     const ctx = makeCtx();
 
-    // scheduled는 실제 시계를 쓰므로 runScheduled를 직접 시간 지정해서 호출
     const { runScheduled } = await import('../src/briefing.js');
     const r1 = await runScheduled(env, new Date(fixedNow));
     assert.equal(r1.sent, true);
@@ -151,7 +149,10 @@ test('정기 실행: 수집 → 요약 → 전송 → 중복 방지', async () =
     const tgCalls = calls.filter((c) => c.url.includes('/sendMessage'));
     assert.equal(tgCalls.length, 1);
     const text = tgCalls[0].body.text;
-    assert.match(text, /11월 2일 \(월\) 경제 브리핑/);
+    assert.ok(text.startsWith('<b>2026년 11월 02일 (월) 경제 브리핑</b>'));
+    assert.match(text, /^\[매일경제\] <a href="https:\/\/news\.example\/a2">원·달러 환율 1,380원 돌파<\/a>$/m);
+    assert.doesNotMatch(text, /^\[\d+\]/m);
+    assert.doesNotMatch(text, /BEACON/);
     assert.match(text, /3줄 요약/);
     assert.match(text, /한은이 금리를 동결했다/);
     assert.match(text, /#금리/);
@@ -160,17 +161,15 @@ test('정기 실행: 수집 → 요약 → 전송 → 중복 방지', async () =
     assert.equal(tgCalls[0].body.chat_id, OWNER);
     assert.equal(tgCalls[0].body.parse_mode, 'HTML');
 
-    // 같은 기사가 키워드 3개에서 다 나와도 한 번씩만
     assert.equal((text.match(/news\.example\/a1/g) || []).length, 1);
 
     const claudeCall = calls.find((c) => c.url.includes('anthropic'));
     assert.equal(claudeCall.body.model, 'claude-haiku-5-5');
 
-    // 같은 날 두 번째 실행은 보내지 않음
     const r2 = await runScheduled(env, new Date(fixedNow + 5 * 60000));
     assert.equal(r2.sent, false);
 
-    // /now 수동 요청: 이미 보낸 기사는 제외 → 새 기사 없음 메시지
+    const stateBefore = env.KV.store.get('state');
     const before = calls.length;
     const res = await worker.fetch(new Request('https://bot.example/webhook', {
       method: 'POST',
@@ -181,7 +180,15 @@ test('정기 실행: 수집 → 요약 → 전송 → 중복 방지', async () =
     await ctx.flush();
     const newMsgs = calls.slice(before).filter((c) => c.url.includes('/sendMessage')).map((c) => c.body.text);
     assert.equal(newMsgs.length, 2);
-    assert.match(newMsgs[1], /새 기사가 없었어요/);
+    assert.match(newMsgs[1], /경제 브리핑 \(미리보기\)/);
+    assert.match(newMsgs[1], /news\.example\/a1/);
+    assert.equal(env.KV.store.get('state'), stateBefore);
+
+    const { sendBriefing } = await import('../src/briefing.js');
+    const before2 = calls.length;
+    await sendBriefing(env);
+    const last = calls.slice(before2).filter((c) => c.url.includes('/sendMessage')).map((c) => c.body.text);
+    assert.match(last[0], /이미 보내드린 기사를 빼면 새 기사가 없어요/);
   } finally {
     Date.now = realNow;
   }
@@ -207,7 +214,7 @@ test('웹훅 보안과 명령어로 설정 변경', async () => {
   assert.equal(saved.time, '06:50');
 
   const before = calls.length;
-  await send('/list', 12345); // 다른 사람
+  await send('/list', 12345);
   assert.equal(calls.length, before);
 });
 
@@ -242,4 +249,44 @@ test('설정 페이지 HTML', () => {
   assert.match(SETTINGS_PAGE, /telegram-web-app\.js/);
   assert.match(SETTINGS_PAGE, /id="kwInput"/);
   assert.doesNotMatch(SETTINGS_PAGE, /\$\{/);
+});
+
+test('Google 실패 시 Bing으로 대체, 둘 다 실패하면 이유 표시', async () => {
+  const { collectArticles, fetchForKeyword, parseRss: parse } = await import('../src/news.js');
+  const now = Date.now();
+  const recent = new Date(now - 3600 * 1000).toUTCString();
+  const bingXml = `<rss xmlns:News="https://www.bing.com/news/search?q=x&amp;format=rss"><channel>
+    <item><title>코스피 2,600 회복</title>
+    <link>http://www.bing.com/news/apiclick.aspx?ref=FexRss&amp;aid=&amp;tid=abc&amp;url=https%3a%2f%2fwww.hankyung.com%2farticle%2f123&amp;c=1&amp;mkt=ko-kr</link>
+    <description>외국인 순매수에 코스피가 반등했다.</description><pubDate>${recent}</pubDate>
+    <News:Source>한국경제</News:Source></item></channel></rss>`;
+
+  const items = parse(bingXml);
+  assert.equal(items[0].link, 'https://www.hankyung.com/article/123');
+  assert.equal(items[0].source, '한국경제');
+  assert.equal(items[0].description, '외국인 순매수에 코스피가 반등했다.');
+
+  const googleDown = { name: 'Google', fetchNews: async () => { throw new Error('HTTP 503'); } };
+  const bingUp = { name: 'Bing', fetchNews: async () => parse(bingXml) };
+  const bingDown = { name: 'Bing', fetchNews: async () => { throw new Error('HTTP 403'); } };
+  const bingEmpty = { name: 'Bing', fetchNews: async () => [] };
+
+  assert.equal((await fetchForKeyword('코스피', 5, {}, [googleDown, bingUp])).length, 1);
+  assert.deepEqual(await fetchForKeyword('코스피', 5, {}, [googleDown, bingEmpty]), []);
+  await assert.rejects(fetchForKeyword('코스피', 5, {}, [googleDown, bingDown]), /Google: HTTP 503, Bing: HTTP 403/);
+
+  globalThis.fetch = async (url) => {
+    const u = String(url);
+    if (u.startsWith('https://news.google.com/')) return new Response('blocked', { status: 503 });
+    if (u.startsWith('https://www.bing.com/news/search')) return new Response(bingXml);
+    throw new Error(`unexpected ${u}`);
+  };
+  const settings = { keywords: ['코스피'], perKeyword: 3, maxArticles: 10 };
+  const result = await collectArticles(settings, {}, [], now);
+  assert.equal(result.articles.length, 1);
+  assert.deepEqual(result.failedKeywords, []);
+
+  globalThis.fetch = async () => new Response('no', { status: 403 });
+  const failed = await collectArticles(settings, {}, [], now);
+  assert.deepEqual(failed.failedKeywords, ['코스피 (Google: HTTP 403, Bing: HTTP 403)']);
 });

@@ -1,5 +1,3 @@
-// 키워드별 뉴스 수집: Google 뉴스 RSS를 먼저 시도하고, 실패하거나 결과가 없으면 Bing 뉴스 RSS로 대체.
-
 const RECENT_HOURS = 30;
 
 export async function collectArticles(settings, env, sentLinks, now = Date.now()) {
@@ -47,7 +45,7 @@ export async function fetchForKeyword(keyword, limit, env, sources = NEWS_SOURCE
       errors.push(`${source.name}: ${String(err.message || err).slice(0, 40)}`);
     }
   }
-  if (gotEmpty) return []; // 한 곳이라도 정상 응답했으면 "기사가 없었던 것"
+  if (gotEmpty) return [];
   throw new Error(errors.join(', '));
 }
 
@@ -109,7 +107,6 @@ function parseRssItem(block) {
   if (source && title.endsWith(suffix)) title = title.slice(0, -suffix.length);
 
   let description = cleanText(pickTag(block, 'description'));
-  // Google 뉴스 RSS의 description은 보통 "제목 + 언론사"뿐이라 정보가 없으면 비운다.
   if (description.startsWith(title)) description = '';
 
   return {
@@ -121,14 +118,11 @@ function parseRssItem(block) {
   };
 }
 
-// Bing RSS 링크는 bing.com/news/apiclick.aspx?...&url=<원문> 형태라 원문 주소를 꺼낸다.
 export function unwrapLink(link) {
   try {
     const u = new URL(link);
     if (u.hostname.endsWith('bing.com') && u.searchParams.get('url')) return u.searchParams.get('url');
-  } catch {
-    // URL이 아니면 그대로 둔다.
-  }
+  } catch {}
   return link;
 }
 
@@ -158,7 +152,7 @@ export function decodeEntities(text) {
 
 export function isRecent(pubDate, now = Date.now()) {
   const time = Date.parse(pubDate);
-  if (Number.isNaN(time)) return true; // 날짜를 못 읽으면 일단 포함
+  if (Number.isNaN(time)) return true;
   return now - time <= RECENT_HOURS * 60 * 60 * 1000;
 }
 
@@ -171,7 +165,6 @@ function markIfNew(article, seenLinks, seenTitles) {
   return true;
 }
 
-// 키워드마다 돌아가며 하나씩 뽑아 특정 키워드에 쏠리지 않게 한다.
 export function roundRobin(buckets, limit) {
   const result = [];
   const longest = Math.max(0, ...buckets.map((b) => b.length));
